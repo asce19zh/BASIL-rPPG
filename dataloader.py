@@ -16,14 +16,14 @@ import torch.nn.functional as F
 @dataclass
 class DatasetConfig:
     size: int
-    length: int #實際訓練時使用的長度
-    raw_length: int            # 讀入的長序列長度，例：120
+    length: int          # Actual length used for training
+    raw_length: int      # Length of the loaded raw sequence, e.g., 120
     sample: int
     ratio: float
     preload: bool
     fixed_sample: bool
     augmentation: dict
-    compress_factor: Union[float, list, None] = None   # 頻率壓縮因子
+    compress_factor: Union[float, list, None] = None   # Frequency compression factor
 
 
 @dataclass
@@ -66,13 +66,13 @@ class VideoDataset(Dataset):
             raw_frames = data['rgb'][start:end]         # tensor (raw_length,H,W,C)
             
             # -----------------------------------------------------
-            # 1. 原版本（直接取前 length frames）
+            # 1. Original version (take the first 'length' frames directly)
             # -----------------------------------------------------
             orig = raw_frames[:self.config.length]      # (60,H,W,C)
             v_data['rgb'] = orig
 
             # -----------------------------------------------------
-            # 2. 增強版本（raw_length → compress → 60）
+            # 2. Augmented version (raw_length -> compress -> 60)
             # -----------------------------------------------------
             if self.config.compress_factor is not None:
                 cf = self._get_freq_factor()
@@ -94,14 +94,14 @@ class VideoDataset(Dataset):
 
             if self.config.compress_factor is not None:
                 gt_aug = self._apply_temporal_compress_gt(gt_raw, cf)
-                # === HR validity check（關鍵）===
+                # === HR validity check (Critical) ===
                 hr_aug = predict_heart_rate_segment(
                     gt_aug,
                     Fs=30,
                     min_hr=40,
                     max_hr=180
                 )
-                #超過區間 不增強
+                # If out of range, do not augment
                 if hr_aug is None:
                     v_data['gt_aug'] = gt_raw[:self.config.length]
                     v_data['rgb_aug'] = orig
@@ -182,15 +182,15 @@ class VideoDataset(Dataset):
 
             # specific clip
             if 'segments' in video_info and len(video_info['segments']) > 0:
-                # orifor seg in video_info['segments']:
+                # ori for seg in video_info['segments']:
                 #    self.index_map.append((video_key, seg['start'], seg['end']))
-                #continue
+                # continue
                 v_len = video_info['length']
                 for seg in video_info['segments']:
                     start = seg['start']
                     raw_end = start + self.config.raw_length
 
-                    # 邊界保護
+                    # Boundary protection
                     if raw_end > v_len:
                         continue
 
@@ -204,7 +204,7 @@ class VideoDataset(Dataset):
                 T = video_info['end'] - video_info['start']          # = 60
                 raw_end = start + self.config.raw_length             # = start + 120
 
-                # 邊界保護
+                # Boundary protection
                 v_len = video_info['length']
                 if raw_end > v_len:
                     continue
@@ -212,18 +212,18 @@ class VideoDataset(Dataset):
                 self.index_map.append((video_key, start, raw_end))
                 continue
 
-            # 使用 raw_length 作為切片單位
+            # Use raw_length as slice unit
             slice_len = self.config.raw_length
 
             s_num = int(v_length // slice_len * self.config.ratio)
             '''
-            測試資料增強
+            Test Data Augmentation
 
             # determine number of samples
             s_num = int(v_length // self.config.length * self.config.ratio)
             '''
             if s_num <= 0:
-                s_num = int(v_length // self.config.raw_length) #wei
+                s_num = int(v_length // self.config.raw_length) # wei
             if s_num <= 0:
                 continue
             s_length = v_length // s_num
@@ -251,7 +251,7 @@ class VideoDataset(Dataset):
         T = frames.shape[0]
         T_new = max(1, int(round(T / cf)))
 
-        # 正確順序： (N, C, T, H, W)
+        # Correct order: (N, C, T, H, W)
         frames = frames.float().permute(3, 0, 1, 2).unsqueeze(0)
         # (1, 3, T, H, W)
 
@@ -274,7 +274,7 @@ class VideoDataset(Dataset):
         return final[0].permute(1, 2, 3, 0)
         # (length, H, W, 3)
             
-    #對gt signal做增強
+    # Augment gt signal
     def _apply_temporal_compress_gt(self, gt, cf):
         """
         gt: Tensor (T,) or (T, 1)
@@ -288,7 +288,7 @@ class VideoDataset(Dataset):
         if gt.dim() == 1:
             gt = gt.unsqueeze(0).unsqueeze(0)  # (1, 1, T)
         elif gt.dim() == 2:
-            gt = gt.unsqueeze(0)               # (1, 1, T)
+            gt = gt.unsqueeze(0)                # (1, 1, T)
 
         T = gt.shape[-1]
         T_new = max(1, int(round(T / cf)))
@@ -317,7 +317,7 @@ class VideoDataset(Dataset):
         f = self.config.compress_factor
 
         if f is None:
-            return 1.0   # ⭐ 沒有增強 → 不壓縮
+            return 1.0   # ⭐ No augmentation -> No compression
 
         if isinstance(f, (float, int)):
             return float(f)
@@ -329,32 +329,32 @@ class VideoDataset(Dataset):
 
 class ScheduledDataLoader:
     """
-    一個排程載入器，可以根據 epoch 自動切換不同的 batch size。
-    它的行為類似一個迭代器，每個 epoch 會 yield 一個對應的 DataLoader 實例。
+    A scheduled loader that automatically switches batch sizes based on the epoch.
+    It behaves like an iterator, yielding a corresponding DataLoader instance for each epoch.
     """
 
     def __init__(self, dataset: Dataset, schedule: list, loader_config: 'LoaderConfig', total_epochs: int):
         self.dataset = dataset
-        self.schedule = sorted(schedule, key=lambda x: x['end_epoch'])  # 確保排程按 epoch 排序
+        self.schedule = sorted(schedule, key=lambda x: x['end_epoch'])  # Ensure schedule is sorted by epoch
         self.loader_config = loader_config
         self.total_epochs = total_epochs
-        self._loaders = {}  # 用於快取已建立的 DataLoader
+        self._loaders = {}  # Cache for created DataLoaders
 
     def __iter__(self):
         """
-        讓這個類別可以被 for 迴圈迭代。
-        在每個 epoch，它會 yield 正確的 DataLoader。
+        Allows this class to be iterated in a for loop.
+        It yields the correct DataLoader at each epoch.
         """
         current_schedule_idx = 0
         for epoch in range(self.total_epochs):
-            # 檢查是否需要切換到下一個排程
+            # Check if we need to switch to the next schedule
             if epoch >= self.schedule[current_schedule_idx]['end_epoch']:
                 if current_schedule_idx < len(self.schedule) - 1:
                     current_schedule_idx += 1
 
             batch_size = self.schedule[current_schedule_idx]['batch_size']
 
-            # 如果對應 batch_size 的 loader 還沒建立，就建立一個
+            # If loader for batch_size is not created, create one
             if batch_size not in self._loaders:
                 self._loaders[batch_size] = DataLoader(
                     self.dataset,
@@ -364,7 +364,7 @@ class ScheduledDataLoader:
                     pin_memory=self.loader_config.pin_memory
                 )
 
-            # Yield 當前 epoch 對應的 loader
+            # Yield the loader corresponding to the current epoch
             yield self._loaders[batch_size]
 
 
@@ -386,18 +386,18 @@ class ScheduledDataLoader:
 
 #     dataset = VideoDataset(data, dataset_config)
 
-#     # 如果 batch_size 不是 list，代表是單一、固定的 batch_size
+#     # If batch_size is not a list, it represents a single, fixed batch_size
 #     if not isinstance(loader_config.batch_size, list):
 #         loader = DataLoader(dataset, batch_size=loader_config.batch_size, shuffle=loader_config.shuffle,
 #                             num_workers=loader_config.num_workers, pin_memory=loader_config.pin_memory)
-#         # 為了與排程載入器介面統一，我們回傳一個只包含單一 loader 的 list
+#         # To unify the interface with the scheduled loader, return a list containing a single loader
 #         return [loader] * (total_epochs or 1)
 
-#     # 如果 batch_size 是 list，代表需要排程
+#     # If batch_size is a list, scheduling is required
 #     else:
 #         if total_epochs is None:
-#             raise ValueError("使用排程 batch_size 時必須提供 total_epochs。")
-#         # 回傳排程載入器實例
+#             raise ValueError("total_epochs must be provided when using scheduled batch_size.")
+#         # Return scheduled loader instance
 #         return ScheduledDataLoader(dataset, loader_config.batch_size, loader_config, total_epochs)
 
 # def _transfer_protcol(txt_path, json_path):
@@ -429,12 +429,12 @@ def get_loader(protocols, dataset_config, loader_config, total_epochs=None):
         if not (_json.exists() or _txt.exists()):
             raise Exception(f"Protocol {protocols[i]} is not available")
         
-        # 检查本地 protocol 目录中是否有 JSON 文件
+        # Check if JSON file exists in the local protocol directory
         import os
         local_protocol_dir = os.path.join(os.path.dirname(__file__), '..', 'protocol')
         local_json_path = os.path.join(local_protocol_dir, os.path.basename(_json))
         
-        # 优先使用本地 JSON，如果不存在则从 TXT 转换
+        # Prioritize local JSON; convert from TXT if it doesn't exist
         if os.path.exists(local_json_path):
             with open(local_json_path, 'r') as f:
                 videos = json.load(f)
@@ -451,18 +451,18 @@ def get_loader(protocols, dataset_config, loader_config, total_epochs=None):
     log.info('Number of videos: ' + str(len(data)))
     dataset = VideoDataset(data, dataset_config)
 
-    # 如果 batch_size 不是 list，代表是單一、固定的 batch_size
+    # If batch_size is not a list, it represents a single, fixed batch_size
     if not isinstance(loader_config.batch_size, list):
         loader = DataLoader(dataset, batch_size=loader_config.batch_size, shuffle=loader_config.shuffle,
                             num_workers=loader_config.num_workers, pin_memory=loader_config.pin_memory)
-        # 為了與排程載入器介面統一，我們回傳一個只包含單一 loader 的 list
+        # To unify the interface with the scheduled loader, return a list containing a single loader
         return [loader] * (total_epochs or 1)
 
-    # 如果 batch_size 是 list，代表需要排程
+    # If batch_size is a list, scheduling is required
     else:
         if total_epochs is None:
-            raise ValueError("使用排程 batch_size 時必須提供 total_epochs。")
-        # 回傳排程載入器實例
+            raise ValueError("total_epochs must be provided when using scheduled batch_size.")
+        # Return scheduled loader instance
         return ScheduledDataLoader(dataset, loader_config.batch_size, loader_config, total_epochs)
 def _transfer_protcol(txt_path, json_path):
 
@@ -482,7 +482,7 @@ def _transfer_protcol(txt_path, json_path):
 
     sorted_videos = sorted(videos, key=lambda x: x['dataset']+x['video'] if 'subfolder' not in x else x['dataset']+x['subfolder']+x['video'])
 
-    # 将 JSON 文件保存到项目本地的 protocol 目录
+    # Save the JSON file to the project's local protocol directory
     import os
     local_protocol_dir = os.path.join(os.path.dirname(__file__), '..', 'protocol')
     os.makedirs(local_protocol_dir, exist_ok=True)
