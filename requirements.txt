@@ -2,18 +2,17 @@
 torch>=1.12.0
 torchvision>=0.13.0
 
-# Tensor Manipulation (Explicitly used in models.py)
+# Tensor Manipulation
 einops>=0.6.0
 numpy>=1.21.0
 
-# Progress Bar (Explicitly used in training loops)
+# Progress Bar
 tqdm>=4.64.0
 
-# Data Processing & Signal Analysis (Likely used in utils/dataloader.py & metric.py)
-# rPPG 專案通常需要 opencv 讀取影片，scipy 進行濾波與 FFT
+# Data Processing & Signal Analysis
 opencv-python>=4.5.0
 scipy>=1.7.0
 pandas>=1.3.0
 
-# Plotting (Optional, often used for logging/visualization)
+# Plotting
 matplotlib>=3.5.0
