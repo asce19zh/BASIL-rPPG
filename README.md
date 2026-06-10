@@ -1,11 +1,7 @@
 # BASIL-rPPG
 
 **Basis Learning with Predictive rPPG Reconstruction for Heart Rate Estimation from Ultra-Short Facial Videos**
-
-> Jhih-Wei Jhao, Wen-Pin Chen, Jun-Ren Chen, Yen-Chun Chou, Shih-Yu Yang, Pei-Kai Huang, Chiou-Ting Hsu
-> ICPR 2026
-
-BASIL-rPPG addresses heart rate (HR) estimation from 2-second facial video clips — a setting where existing methods fail due to insufficient periodic cues and temporal sparsity. The framework learns a compact set of physiological rPPG basis vectors (Stage 1) and then predicts mixing coefficients from facial videos to reconstruct the rPPG waveform (Stage 2).
+Jhih-Wei Jhao, Wen-Pin Chen, Jun-Ren Chen, Yen-Chun Chou, Shih-Yu Yang, Pei-Kai Huang, Chiou-Ting Hsu
 
 ---
 
