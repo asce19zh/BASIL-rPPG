@@ -9,16 +9,34 @@ BASIL-rPPG addresses heart rate (HR) estimation from 2-second facial video clips
 
 ---
 
-## Method Overview
+## Abstract
 
-The framework follows a two-stage training paradigm:
+Remote photoplethysmography (rPPG) enables non-contact
+heart rate (HR) measurement by detecting subtle skin color variations.
+While existing methods perform well on relatively long video sequences
+(e.g., 10 seconds), they often fail on ultra-short clips (e.g., 2 seconds),
+which are critical for rapid physiological assessment and timely moni-
+toring. Under such limited temporal windows, the scarcity and unrelia-
+bility of periodic cues render accurate HR estimation particularly chal-
+lenging. To address these limitations, we propose BASIL-rPPG (Basis
+Learning for rPPG), a novel framework that reformulates ultra-short HR
+estimation as a basis-driven predictive reconstruction task. Specifically,
+we introduce a learnable physiological basis constructed via learnable
+Fourier feature embeddings, which explicitly captures the quasi-periodic
+structure tailored to rPPG signals and serves as a strong signal prior.
+Building on this basis, we design a reconstruction strategy to predict
+mixing coefficients directly from facial videos for explicitly recovering the
+underlying rPPG waveforms, with an auxiliary branch providing regu-
+larization to mitigate the impact of temporal sparsity. Furthermore, we
+incorporate Dual-Level Temporal Augmentation to expand effective ba-
+sis coverage and enhance generalization across a diverse heart rate spec-
+trum. Extensive experiments demonstrate that BASIL-rPPG effectively
+overcomes the inherent limitations of ultra-short video analysis and sig-
+nificantly outperforms previous methods in ultra-short HR estimation.
 
-**Stage 1 — rPPG Basis Learning**
-A Basis Layer (AdaFNN) with learnable Fourier Feature Embeddings learns a compact set of rPPG basis vectors from ground-truth PPG signals. A Reconstruction Coefficient (RC) predictor is jointly trained to predict mixing coefficients from signals.
-
-**Stage 2 — Basis-Driven Predictive Reconstruction**
-With the basis frozen, a Feature Extractor (FE) and Coefficient Predictor (CP) are trained to map facial videos to reconstruction coefficients. An Auxiliary Estimator (AE) provides complementary unconstrained supervision. Dual-Level Temporal Augmentation (Basis Temporal Scaling + Video Temporal Resampling) expands heart rate coverage during training.
-
+---
+## BASIL-rPPG Framework
+![BASIL-rPPG](images/fig2.png)
 ---
 
 ## Requirements
@@ -240,35 +258,3 @@ Evaluation metrics reported: **MAE** (bpm), **RMSE** (bpm), **Pearson R**.
 
 ---
 
-## Results
-
-Intra-domain performance on 2-second clips:
-
-| Method | UBFC MAE | UBFC R | PURE MAE | PURE R | COHFACE MAE | COHFACE R |
-|---|---|---|---|---|---|---|
-| PhysFormer (CVPR'22) | 7.38 | 0.59 | 6.56 | 0.43 | 11.87 | 0.20 |
-| RhythmMamba (AAAI'25) | 5.18 | 0.89 | 2.62 | 0.80 | 11.06 | 0.18 |
-| **BASIL-rPPG (Ours)** | **4.47** | **0.91** | **2.56** | **0.91** | **6.86** | **0.79** |
-
----
-
-## Logs
-
-Training logs are saved under `./log/`:
-```
-./log/train/<protocol>/<model>/info_<timestamp>.log
-./log/train/<protocol>/<model>/detail_<timestamp>.log
-```
-
----
-
-## Citation
-
-```bibtex
-@inproceedings{jhao2026basil,
-  title     = {BASIL-rPPG: Basis Learning with Predictive rPPG Reconstruction for Heart Rate Estimation from Ultra-Short Facial Videos},
-  author    = {Jhih-Wei Jhao and Wen-Pin Chen and Jun-Ren Chen and Yen-Chun Chou and Shih-Yu Yang and Pei-Kai Huang and Chiou-Ting Hsu},
-  booktitle = {Proceedings of the International Conference on Pattern Recognition (ICPR)},
-  year      = {2026}
-}
-```
