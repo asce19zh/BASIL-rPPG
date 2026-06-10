@@ -36,7 +36,7 @@ nificantly outperforms previous methods in ultra-short HR estimation.
 
 ---
 ## BASIL-rPPG Framework
-![BASIL-rPPG](images/fig2.png)
+![BASIL-rPPG](Images/fig2.png)
 ---
 
 ## Requirements
