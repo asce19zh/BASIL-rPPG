@@ -38,7 +38,7 @@ nificantly outperforms previous methods in ultra-short HR estimation.
 ## Requirements
 
 - Python 3.9+
-- CUDA-capable GPU (tested on NVIDIA RTX 4090)
+- CUDA-capable GPU (implemented and trained on NVIDIA RTX 4090)
 
 Install dependencies:
 
